@@ -1,0 +1,115 @@
+name: PLD Agile
+
+on:
+  push:
+    tags:
+      - v*
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          mkdir .venv
+          python -m pip install pipenv
+          pipenv install --dev
+      - name: Run lint
+        run: |
+          .venv/bin/python -m black --check src/
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update 
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0 libxcb-cursor0
+      - name: Install dependencies
+        run: |
+          mkdir .venv
+          python -m pip install pipenv
+          pipenv install --dev
+      - name: Run tests
+        run: .venv/bin/python -m pytest --cov-report=xml --cov-report=html --cov-report=term --cov=src --html=testing_report.html --self-contained-html src/
+      - name: XML Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: pld-agile-coverage-xml
+          path: coverage.xml
+      - name: HTML Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: pld-agile-coverage-html
+          path: htmlcov/*
+      - name: HTML Testing report
+        uses: actions/upload-artifact@v3
+        with:
+          name: pld-agile-testing-report
+          path: testing_report.html
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update 
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0 libxcb-cursor0
+      - name: Install dependencies
+        run: |
+          mkdir .venv
+          python -m pip install pipenv
+          pipenv install --dev
+      - name: Generate docs
+        run: .venv/bin/python -m pdoc --force --html --output-dir docs src
+      - name: Upload generate docs
+        uses: actions/upload-artifact@v3
+        with:
+          name: pld-agile-docs
+          path: docs/*
+
+
+  build_linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.ref, 'refs/tags/')
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install ffmpeg libsm6 libxext6  -y
+          mkdir .venv
+          python -m pip install pipenv
+          pipenv install --dev
+      - name: Build
+        run: .venv/bin/pyinstaller --windowed --name "PLD Agile" --paths "." src/main.py
+      - name: Archive build
+        uses: actions/upload-artifact@v3
+        with:
+          name: pld-agile-linux
+          path: dist/*

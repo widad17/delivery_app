@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pyqt6 = "*"
+reactivex = "*"
+qtawesome = "*"
+networkx = "*"
+
+[dev-packages]
+black = "*"
+isort = "*"
+pytest = "*"
+pyinstaller = "*"
+pytest-cov = "*"
+pytest-html = "*"
+pdoc3 = "*"
+
+[requires]
+python_version = "3.10"
